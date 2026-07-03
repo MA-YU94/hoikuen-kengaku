@@ -125,13 +125,44 @@ function applyRemoteState(data) {
   };
 }
 
+// Firestore移行前にこの端末のlocalStorageへ保存されたデータが残っていれば、
+// Firestore側が空の場合に一度だけ引き継ぐ
+const LEGACY_STORAGE_KEY = "hoikuenKengakuApp.v1";
+
+function readLegacyLocalData() {
+  try {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.nurseries) && parsed.nurseries.length > 0) return parsed;
+  } catch (e) {
+    console.error("旧データの読み込みに失敗しました", e);
+  }
+  return null;
+}
+
 onSnapshot(stateDocRef, snap => {
   if (snap.exists()) {
     applyRemoteState(snap.data());
   } else {
     state = defaultState();
-    setDoc(stateDocRef, state);
   }
+
+  if (state.nurseries.length === 0) {
+    const legacy = readLegacyLocalData();
+    if (legacy) {
+      const base = defaultState();
+      state = {
+        weights: Object.assign({}, base.weights, legacy.weights || {}),
+        nurseries: legacy.nurseries,
+      };
+      saveState();
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    } else if (!snap.exists()) {
+      setDoc(stateDocRef, state);
+    }
+  }
+
   renderAll();
 }, err => {
   console.error("Firestoreの同期でエラーが発生しました", err);
