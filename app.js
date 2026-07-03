@@ -1,7 +1,5 @@
 /* ===================== データ定義 ===================== */
 
-const STORAGE_KEY = "hoikuenKengakuApp.v1";
-
 const DEFAULT_CATEGORIES = [
   // S ランク (合計49)
   { key: "teacher_mood",     rank: "S", label: "先生の雰囲気",                     weight: 12 },
@@ -106,27 +104,39 @@ function defaultState() {
   return { weights, nurseries: [] };
 }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
-    const parsed = JSON.parse(raw);
-    const base = defaultState();
-    return {
-      weights: Object.assign({}, base.weights, parsed.weights || {}),
-      nurseries: Array.isArray(parsed.nurseries) ? parsed.nurseries : [],
-    };
-  } catch (e) {
-    console.error("状態の読み込みに失敗しました", e);
-    return defaultState();
-  }
-}
+const FIRESTORE_DOC_ID = "shared-family-data";
+const { db, doc, setDoc, onSnapshot } = window.__firebase;
+const stateDocRef = doc(db, "apps", FIRESTORE_DOC_ID);
+
+let state = defaultState();
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  setDoc(stateDocRef, state).catch(err => {
+    console.error("Firestoreへの保存に失敗しました", err);
+    alert("データの保存に失敗しました。インターネット接続をご確認ください。");
+  });
 }
 
-let state = loadState();
+function applyRemoteState(data) {
+  const base = defaultState();
+  state = {
+    weights: Object.assign({}, base.weights, (data && data.weights) || {}),
+    nurseries: Array.isArray(data && data.nurseries) ? data.nurseries : [],
+  };
+}
+
+onSnapshot(stateDocRef, snap => {
+  if (snap.exists()) {
+    applyRemoteState(snap.data());
+  } else {
+    state = defaultState();
+    setDoc(stateDocRef, state);
+  }
+  renderAll();
+}, err => {
+  console.error("Firestoreの同期でエラーが発生しました", err);
+  alert("データの同期でエラーが発生しました。インターネット接続をご確認ください。");
+});
 
 /* ===================== スコア計算 ===================== */
 
@@ -743,4 +753,3 @@ function renderAll() {
 }
 
 resetForm();
-renderAll();

@@ -6,6 +6,24 @@
 <title>保育園見学record - 比較アプリ</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { initializeFirestore, persistentLocalCache, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAGQqxuEtUVudHwNXQuzTK298h687kYvwc",
+    authDomain: "hoikuen-kengaku.firebaseapp.com",
+    projectId: "hoikuen-kengaku",
+    storageBucket: "hoikuen-kengaku.firebasestorage.app",
+    messagingSenderId: "402759803759",
+    appId: "1:402759803759:web:2426688883f4a0bc7abe9a"
+  };
+
+  const firebaseApp = initializeApp(firebaseConfig);
+  const db = initializeFirestore(firebaseApp, { localCache: persistentLocalCache() });
+
+  window.__firebase = { db, doc, setDoc, onSnapshot };
+</script>
 </head>
 <body>
 <header class="app-header">
@@ -168,6 +186,6 @@
 
 </main>
 
-<script src="app.js"></script>
+<script src="app.js" defer></script>
 </body>
 </html>
