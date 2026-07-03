@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>保育園見学record - 比較アプリ</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="app-header">
+  <h1>保育園見学ノート</h1>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="ranking">ランキング</button>
+    <button class="tab-btn" data-tab="edit">園を登録・編集</button>
+    <button class="tab-btn" data-tab="weights">重み設定</button>
+    <button class="tab-btn" data-tab="radar">レーダーチャート比較</button>
+    <button class="tab-btn" data-tab="entry">入りやすさ一覧</button>
+  </nav>
+  <div class="header-actions">
+    <button id="btnExport" title="データをJSONファイルとして保存">エクスポート</button>
+    <label class="import-label" title="JSONファイルから読み込み">
+      インポート
+      <input type="file" id="fileImport" accept="application/json" hidden>
+    </label>
+  </div>
+</header>
+
+<main>
+
+  <!-- ランキング -->
+  <section id="tab-ranking" class="tab-panel active">
+    <h2>総合ランキング</h2>
+    <p class="hint">重み × 評価点(5段階)から100点満点で自動算出したスコアで順位付けします。</p>
+    <div class="table-wrap">
+      <table id="rankingTable">
+        <thead>
+          <tr>
+            <th>順位</th>
+            <th>園名</th>
+            <th>住所</th>
+            <th>見学日</th>
+            <th>月額合計</th>
+            <th>慣らし保育日数</th>
+            <th>合計スコア</th>
+            <th>Sランク小計</th>
+            <th>Aランク小計</th>
+            <th>B/Cランク小計</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="rankingBody"></tbody>
+      </table>
+    </div>
+    <div id="rankingEmpty" class="empty-msg" hidden>まだ園が登録されていません。「園を登録・編集」タブから追加してください。</div>
+  </section>
+
+  <!-- 登録・編集 -->
+  <section id="tab-edit" class="tab-panel">
+    <h2 id="editFormTitle">園を新規登録</h2>
+    <form id="nurseryForm">
+      <input type="hidden" id="nurseryId">
+      <div class="form-grid basic-info">
+        <label>園名 <input type="text" id="fName" required></label>
+        <label>住所 <input type="text" id="fAddress"></label>
+        <label>見学日 <input type="date" id="fVisitDate"></label>
+        <label>入りやすさ
+          <select id="fEntryTag">
+            <option value="高い">高い</option>
+            <option value="普通" selected>普通</option>
+            <option value="低い">低い</option>
+          </select>
+        </label>
+        <label class="span-2">自治体指数メモ <input type="text" id="fMunicipalityMemo" placeholder="例: 保育園指数 20点 / 待機児童数 5人 など"></label>
+        <label class="span-2">全体メモ <textarea id="fMemo" rows="2" placeholder="自由記述メモ"></textarea></label>
+      </div>
+
+      <nav class="subtabs">
+        <button type="button" class="subtab-btn active" data-subtab="score">評価スコア</button>
+        <button type="button" class="subtab-btn" data-subtab="cost">金額情報</button>
+        <button type="button" class="subtab-btn" data-subtab="memo">見学メモ</button>
+      </nav>
+
+      <div class="subtab-panel active" data-subtab-panel="score">
+        <div id="ratingGroups"></div>
+      </div>
+
+      <div class="subtab-panel" data-subtab-panel="cost">
+        <div class="cost-section">
+          <h3 class="rating-section-title">月額費用<span class="section-hint">(円/月・スコアには影響しません)</span></h3>
+          <div class="cost-grid">
+            <label>保育料(円) <input type="number" id="fCostTuition" min="0" step="100" placeholder="0"></label>
+            <label>衛生費(円) <input type="number" id="fCostHygiene" min="0" step="100" placeholder="0"></label>
+            <label>サブスク費(円) <input type="number" id="fCostSubscription" min="0" step="100" placeholder="0"></label>
+            <label>延長料金(30分)(円) <input type="number" id="fCostExtended30" min="0" step="100" placeholder="0"></label>
+            <label>延長料金(最大)(円) <input type="number" id="fCostMisc" min="0" step="100" placeholder="0"></label>
+          </div>
+          <div class="cost-total">月額合計: <span id="costTotalDisplay">0円</span></div>
+        </div>
+
+        <div class="cost-section">
+          <h3 class="rating-section-title">慣らし保育<span class="section-hint">(日数はスコアに含まれません)</span></h3>
+          <div class="cost-grid">
+            <label>慣らし保育日数(日) <input type="number" id="fSettlingDays" min="0" step="1" placeholder="0"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="subtab-panel" data-subtab-panel="memo">
+        <p class="hint">見学中にスマホでもメモしやすいよう、質問を上から順に並べています。回答は後からいつでも編集・追記できます。</p>
+        <div id="memoQuestionGroups"></div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" id="btnSave">保存する</button>
+        <button type="button" id="btnCancelEdit" hidden>編集をキャンセル</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 重み設定 -->
+  <section id="tab-weights" class="tab-panel">
+    <h2>評価カテゴリの重み設定</h2>
+    <p class="hint">各カテゴリの重みを調整できます。合計スコアは現在の重み合計を100点に正規化して算出するため、合計が100からずれても比率は保たれます。</p>
+    <div id="weightSumInfo" class="sum-info"></div>
+    <div id="weightGroups"></div>
+    <div class="form-actions">
+      <button id="btnSaveWeights">重みを保存</button>
+      <button id="btnResetWeights" class="secondary">初期値に戻す</button>
+    </div>
+  </section>
+
+  <!-- レーダーチャート -->
+  <section id="tab-radar" class="tab-panel">
+    <h2>レーダーチャート比較</h2>
+    <p class="hint">カテゴリ数が多いためランク別にグラフを分けています。比較したい園を選んでください(最大6園)。</p>
+    <div id="radarNurserySelect" class="chip-select"></div>
+    <div class="radar-rank-tabs">
+      <button class="radar-rank-btn active" data-rank="S">Sランク (5項目)</button>
+      <button class="radar-rank-btn" data-rank="A">Aランク (8項目)</button>
+      <button class="radar-rank-btn" data-rank="BC">B/Cランク (15項目)</button>
+      <button class="radar-rank-btn" data-rank="TOP">重要項目のみ(上位8)</button>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="radarChart"></canvas>
+    </div>
+    <div id="radarEmpty" class="empty-msg">比較する園を選択してください。</div>
+  </section>
+
+  <!-- 入りやすさ一覧 -->
+  <section id="tab-entry" class="tab-panel">
+    <h2>入りやすさ・自治体指数 一覧</h2>
+    <p class="hint">スコアには含めない別枠情報の一覧です。</p>
+    <div class="table-wrap">
+      <table id="entryTable">
+        <thead>
+          <tr>
+            <th>園名</th>
+            <th>入りやすさ</th>
+            <th>自治体指数メモ</th>
+            <th>見学日</th>
+          </tr>
+        </thead>
+        <tbody id="entryBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
