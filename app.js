@@ -346,30 +346,48 @@ function buildRatingRow(c) {
   return row;
 }
 
+function jumpToDetails(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.open = true;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function renderRatingGroups() {
   const container = document.getElementById("ratingGroups");
   container.innerHTML = "";
+  const navContainer = document.getElementById("ratingJumpNav");
+  navContainer.innerHTML = "";
+  const navItems = [];
 
   // セクション1: 基本設備・サービス (あり/なしのカテゴリ)
   const boolCats = DEFAULT_CATEGORIES.filter(c => c.type === "boolean");
-  const boolSection = document.createElement("div");
-  boolSection.className = "rating-section";
-  boolSection.innerHTML = `<h3 class="rating-section-title">基本設備・サービス<span class="section-hint">(あり/なしで入力)</span></h3>`;
+  const boolDetails = document.createElement("details");
+  boolDetails.className = "rank-group";
+  boolDetails.id = "rating-jump-basic";
+  boolDetails.open = true;
+  const boolSummary = document.createElement("summary");
+  boolSummary.innerHTML = `基本設備・サービス<span class="section-hint">(あり/なしで入力・${boolCats.length}項目)</span>`;
+  boolDetails.appendChild(boolSummary);
   const boolRows = document.createElement("div");
   boolRows.className = "rating-rows plain";
   boolCats.forEach(c => boolRows.appendChild(buildRatingRow(c)));
-  boolSection.appendChild(boolRows);
-  container.appendChild(boolSection);
+  boolDetails.appendChild(boolRows);
+  container.appendChild(boolDetails);
+  navItems.push({ id: "rating-jump-basic", label: "基本設備・サービス" });
 
   // セクション2: 保育の質・環境評価 (5段階評価のカテゴリ)
-  const ratingSection = document.createElement("div");
-  ratingSection.className = "rating-section";
-  ratingSection.innerHTML = `<h3 class="rating-section-title">保育の質・環境評価<span class="section-hint">(5段階で入力)</span></h3>`;
+  const ratingSectionTitle = document.createElement("h3");
+  ratingSectionTitle.className = "rating-section-title";
+  ratingSectionTitle.innerHTML = `保育の質・環境評価<span class="section-hint">(5段階で入力)</span>`;
+  container.appendChild(ratingSectionTitle);
+
   ["S", "A", "BC"].forEach(rank => {
     const cats = DEFAULT_CATEGORIES.filter(c => c.rank === rank && c.type !== "boolean");
     if (cats.length === 0) return;
     const details = document.createElement("details");
     details.className = "rank-group";
+    details.id = `rating-jump-${rank}`;
     details.open = rank === "S";
     const summary = document.createElement("summary");
     summary.innerHTML = `<span class="rank-badge ${rank}">${RANK_LABELS[rank]}</span> 評価入力 (${cats.length}項目)`;
@@ -379,9 +397,18 @@ function renderRatingGroups() {
     rows.className = "rating-rows";
     cats.forEach(c => rows.appendChild(buildRatingRow(c)));
     details.appendChild(rows);
-    ratingSection.appendChild(details);
+    container.appendChild(details);
+    navItems.push({ id: `rating-jump-${rank}`, label: RANK_LABELS[rank] });
   });
-  container.appendChild(ratingSection);
+
+  navItems.forEach(item => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "jump-chip";
+    chip.textContent = item.label;
+    chip.addEventListener("click", () => jumpToDetails(item.id));
+    navContainer.appendChild(chip);
+  });
 
   container.querySelectorAll(".star-input").forEach(starInput => {
     starInput.querySelectorAll("button").forEach(btn => {
@@ -437,10 +464,18 @@ function getRatingValues() {
 function renderMemoQuestions() {
   const container = document.getElementById("memoQuestionGroups");
   container.innerHTML = "";
-  VISIT_QUESTIONS.forEach(cat => {
-    const section = document.createElement("div");
-    section.className = "memo-category";
-    section.innerHTML = `<h4 class="memo-category-title">${cat.category}</h4>`;
+  const navContainer = document.getElementById("memoJumpNav");
+  navContainer.innerHTML = "";
+
+  VISIT_QUESTIONS.forEach((cat, idx) => {
+    const sectionId = `memo-jump-${idx}`;
+    const details = document.createElement("details");
+    details.className = "rank-group";
+    details.id = sectionId;
+    const summary = document.createElement("summary");
+    summary.innerHTML = `${cat.category}<span class="section-hint">(${cat.questions.length}項目)</span>`;
+    details.appendChild(summary);
+
     const list = document.createElement("div");
     list.className = "memo-question-list";
     cat.questions.forEach(q => {
@@ -452,8 +487,15 @@ function renderMemoQuestions() {
       `;
       list.appendChild(row);
     });
-    section.appendChild(list);
-    container.appendChild(section);
+    details.appendChild(list);
+    container.appendChild(details);
+
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "jump-chip";
+    chip.textContent = cat.category;
+    chip.addEventListener("click", () => jumpToDetails(sectionId));
+    navContainer.appendChild(chip);
   });
 }
 
