@@ -59,6 +59,7 @@
             <th>住所</th>
             <th>見学日</th>
             <th>月額合計</th>
+            <th>初期費用合計</th>
             <th>慣らし保育日数</th>
             <th>合計スコア</th>
             <th>Sランク小計</th>
@@ -114,6 +115,17 @@
             <label>延長料金(最大)(円) <input type="number" id="fCostMisc" min="0" step="100" placeholder="0"></label>
           </div>
           <div class="cost-total">月額合計: <span id="costTotalDisplay">0円</span></div>
+        </div>
+
+        <div class="cost-section">
+          <h3 class="rating-section-title">初期費用<span class="section-hint">(入園時の一度だけの費用・スコアには影響しません)</span></h3>
+          <div class="cost-grid">
+            <label>防災頭巾(円) <input type="number" id="fInitialBosai" min="0" step="100" placeholder="0"></label>
+            <label>布団代(円) <input type="number" id="fInitialFuton" min="0" step="100" placeholder="0"></label>
+            <label>用品一式(円) <input type="number" id="fInitialSupplies" min="0" step="100" placeholder="0"></label>
+            <label>その他初期費用(円) <input type="number" id="fInitialMisc" min="0" step="100" placeholder="0"></label>
+          </div>
+          <div class="cost-total">初期費用合計: <span id="initialCostTotalDisplay">0円</span></div>
         </div>
 
         <div class="cost-section">

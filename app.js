@@ -221,6 +221,26 @@ function formatYen(amount) {
   return `${Number(amount || 0).toLocaleString("ja-JP")}円`;
 }
 
+/* ===================== 初期費用 (入園時のみ・スコアとは別枠) ===================== */
+
+const INITIAL_COST_FIELDS = [
+  { key: "safetyHood",   label: "防災頭巾" },
+  { key: "futon",        label: "布団代" },
+  { key: "suppliesSet",  label: "用品一式" },
+  { key: "otherInitial", label: "その他初期費用" },
+];
+
+function defaultInitialCosts() {
+  const costs = {};
+  INITIAL_COST_FIELDS.forEach(f => costs[f.key] = 0);
+  return costs;
+}
+
+function initialCostTotal(nursery) {
+  const costs = Object.assign(defaultInitialCosts(), (nursery && nursery.initialCosts) || {});
+  return INITIAL_COST_FIELDS.reduce((sum, f) => sum + Number(costs[f.key] || 0), 0);
+}
+
 /* ===================== タブ切り替え ===================== */
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -266,6 +286,7 @@ function renderRanking() {
       <td>${escapeHtml(n.address || "")}</td>
       <td>${escapeHtml(n.visitDate || "")}</td>
       <td class="cost-cell">${formatYen(costTotal(n))}</td>
+      <td class="cost-cell">${formatYen(initialCostTotal(n))}</td>
       <td>${Number(n.settlingDays || 0)}日</td>
       <td class="score-cell">${totalScore(n).toFixed(1)}</td>
       <td>${rankSubScoreNormalized(n, "S").toFixed(1)}</td>
@@ -477,6 +498,32 @@ Object.values(COST_FIELD_INPUT_IDS).forEach(id => {
   document.getElementById(id).addEventListener("input", updateCostTotalDisplay);
 });
 
+const INITIAL_COST_FIELD_INPUT_IDS = {
+  safetyHood: "fInitialBosai",
+  futon: "fInitialFuton",
+  suppliesSet: "fInitialSupplies",
+  otherInitial: "fInitialMisc",
+};
+
+function getInitialCostFieldValues() {
+  const costs = {};
+  INITIAL_COST_FIELDS.forEach(f => {
+    costs[f.key] = Number(document.getElementById(INITIAL_COST_FIELD_INPUT_IDS[f.key]).value || 0);
+  });
+  return costs;
+}
+
+function updateInitialCostTotalDisplay() {
+  const total = INITIAL_COST_FIELDS.reduce((sum, f) => {
+    return sum + Number(document.getElementById(INITIAL_COST_FIELD_INPUT_IDS[f.key]).value || 0);
+  }, 0);
+  document.getElementById("initialCostTotalDisplay").textContent = formatYen(total);
+}
+
+Object.values(INITIAL_COST_FIELD_INPUT_IDS).forEach(id => {
+  document.getElementById(id).addEventListener("input", updateInitialCostTotalDisplay);
+});
+
 function switchToSubtab(name) {
   document.querySelectorAll(".subtab-btn").forEach(b => b.classList.toggle("active", b.dataset.subtab === name));
   document.querySelectorAll(".subtab-panel").forEach(p => p.classList.toggle("active", p.dataset.subtabPanel === name));
@@ -489,6 +536,7 @@ function resetForm() {
   document.getElementById("btnCancelEdit").hidden = true;
   renderRatingGroups();
   updateCostTotalDisplay();
+  updateInitialCostTotalDisplay();
   renderMemoQuestions();
   switchToSubtab("score");
 }
@@ -509,6 +557,11 @@ function loadNurseryIntoForm(id) {
     document.getElementById(COST_FIELD_INPUT_IDS[f.key]).value = costs[f.key] || "";
   });
   updateCostTotalDisplay();
+  const initialCosts = Object.assign(defaultInitialCosts(), n.initialCosts || {});
+  INITIAL_COST_FIELDS.forEach(f => {
+    document.getElementById(INITIAL_COST_FIELD_INPUT_IDS[f.key]).value = initialCosts[f.key] || "";
+  });
+  updateInitialCostTotalDisplay();
   document.getElementById("fSettlingDays").value = n.settlingDays || "";
   renderRatingGroups();
   Object.entries(n.ratings || {}).forEach(([k, v]) => setRatingValue(k, v));
@@ -532,6 +585,7 @@ document.getElementById("nurseryForm").addEventListener("submit", e => {
     memo: document.getElementById("fMemo").value.trim(),
     ratings: getRatingValues(),
     costs: getCostFieldValues(),
+    initialCosts: getInitialCostFieldValues(),
     settlingDays: Number(document.getElementById("fSettlingDays").value || 0),
     visitMemos: getMemoValues(),
   };
